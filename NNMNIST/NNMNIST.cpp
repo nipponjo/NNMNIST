@@ -397,6 +397,8 @@ void backprop(unsigned char* x_in, unsigned char y_in, double** nabla_w[], doubl
 
 	double* delta = hamard(delta_t1, delta_t2, sizes[n]);
 
+	cout << "Hello World";
+
 	free(delta_t1);
 	free(delta_t2);
 
