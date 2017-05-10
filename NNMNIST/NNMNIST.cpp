@@ -33,7 +33,7 @@ const int eta = 0;
 int reverseInt(int);
 void read_mnist();
 double* add(double*, double*, int);
-void backprop(unsigned char x[784], unsigned char y, double** nabla_w[], double* nabla_b[]);
+void backprop(unsigned char* x, unsigned char y, double** nabla_w[], double* nabla_b[]);
 void SGD(int epochs, int mini_batch_size, double eta);
 double dot(double*, double*, int);
 double* dot(double**, double*, int, int);
@@ -126,7 +126,17 @@ int main()
 
 	read_mnist();
 
+	
+	
 	//shuffle_images(validation_images, validation_data, 10000);
+
+	for (int i = 0; i < 10; i++) {
+		cout << (int)test_data[i];
+		for (int j = 0; j < 748; j++) {
+			cout << ((test_images[i][j] > 10) ? "0" : " ");
+			if (!(j % 28)) cout << endl;
+		}
+	}
 
 	SGD(10, 10, 3.0);
 
@@ -165,7 +175,7 @@ int reverseInt(int i)
 
 void read_mnist()
 {
-	ifstream file("C:/Users/CJ/Desktop/MNIST/t10k-images.idx3-ubyte", ios::binary);
+	ifstream file("C:/Users/updat_000/Desktop/MNIST/t10k-images.idx3-ubyte", ios::binary);
 	if (file.is_open())
 	{
 		int magic_number = 0; file.read((char*)&magic_number, sizeof(magic_number));
@@ -185,7 +195,7 @@ void read_mnist()
 		}		
 	}
 
-	ifstream file2("C:/Users/CJ/Desktop/MNIST/t10k-labels.idx1-ubyte", ios::binary);
+	ifstream file2("C:/Users/updat_000/Desktop/MNIST/t10k-labels.idx1-ubyte", ios::binary);
 	if (file2.is_open())
 	{
 		int magic_number = 0; file2.read((char*)&magic_number, sizeof(magic_number));
@@ -201,7 +211,7 @@ void read_mnist()
 		}
 	}
 
-	ifstream file3("C:/Users/CJ/Desktop/MNIST/train-images.idx3-ubyte", ios::binary);
+	ifstream file3("C:/Users/updat_000/Desktop/MNIST/train-images.idx3-ubyte", ios::binary);
 	if (file3.is_open())
 	{
 		int magic_number = 0; file3.read((char*)&magic_number, sizeof(magic_number));
@@ -227,7 +237,7 @@ void read_mnist()
 		}
 	}
 
-	ifstream file4("C:/Users/CJ/Desktop/MNIST/train-labels.idx1-ubyte", ios::binary);
+	ifstream file4("C:/Users/updat_000/Desktop/MNIST/train-labels.idx1-ubyte", ios::binary);
 	if (file4.is_open())
 	{
 		int magic_number = 0; file4.read((char*)&magic_number, sizeof(magic_number));
@@ -341,7 +351,7 @@ void update_mini_batch() {
 
 }
 
-void backprop(unsigned char x_in[784], unsigned char y_in, double** nabla_w[], double* nabla_b[]) {
+void backprop(unsigned char* x_in, unsigned char y_in, double** nabla_w[], double* nabla_b[]) {
 	
 	//double** nabla_w[n];
 	//double* nabla_b[n];
@@ -355,7 +365,7 @@ void backprop(unsigned char x_in[784], unsigned char y_in, double** nabla_w[], d
 	//	//allocate_mem(&z[l], sizes[l + 1]);
 	//}
 
-	double x[784];
+	double* x = (double*)malloc(784*sizeof(double));
 	double y[10] = { 0.0 };
 
 	for (int i = 0; i < 784; i++) {
@@ -372,31 +382,62 @@ void backprop(unsigned char x_in[784], unsigned char y_in, double** nabla_w[], d
 	for (int l = 0; l < n; l++)
 	{
 		//for (int j = 0; j < sizes[l]; j++) {
-			double* z = add(dot(w[l], activation, sizes[l+1], sizes[l]), b[l], sizes[l+1]);
+			double* z_t1 = dot(w[l], activation, sizes[l + 1], sizes[l]);
+			double* z = add(z_t1, b[l], sizes[l+1]);
+			free(z_t1);
+
 			zs[l] = z;
 			activation = sigmoid(z, sizes[l+1]);
 			activations[l + 1] = activation;
 		//}		
 	}
 
-	double* delta = hamard(cost_derivative(activations[n], y, sizes[n]),
-		sigmoid_prime(zs[n-1], sizes[n]), sizes[n]);
+	double* delta_t1 = cost_derivative(activations[n], y, sizes[n]);
+	double* delta_t2 = sigmoid_prime(zs[n - 1], sizes[n]);
 
-	nabla_b[n-1] = delta; //Speicherallokation...
+	double* delta = hamard(delta_t1, delta_t2, sizes[n]);
+
+	free(delta_t1):
+	free(delta_t2);
+
+	//nabla_b[n-1] = delta; //Speicherallokation...
+	for (int i = 0; i < sizes[n]; i++) {
+		nabla_b[n - 1][i] = delta[i];
+	}
+	
 	for (int i = 0; i < sizes[n]; i++)
 		for (int j = 0; j < sizes[n - 1]; j++)
 			nabla_w[n-1][i][j] = delta[i] * activations[n - 1][j];
 
+	
+
 	for (int l = n-1; l >= 1; l--) {
 		double *sp = sigmoid_prime(zs[l-1], sizes[l]);
-		delta = hamard(dot_T(w[l], delta, sizes[l+1], sizes[l]), sp, sizes[l]);
-		nabla_b[l - 1] = delta;
+		double* delta_t1 = dot_T(w[l], delta, sizes[l + 1], sizes[l]);
 
-		for (int i = 0; i < sizes[l]; i++)
-			for (int j = 0; j < sizes[l - 1]; j++)
+		free(delta);
+
+		delta = hamard(delta_t1, sp, sizes[l]);
+		free(sp); free(delta_t1);
+
+		for (int i = 0; i < sizes[l]; i++) {
+			nabla_b[l - 1][i] = delta[i];
+		}		
+		for (int i = 0; i < sizes[l]; i++) {
+			for (int j = 0; j < sizes[l - 1]; j++) {
 				nabla_w[l - 1][i][j] = delta[i] * activations[l - 1][j];
-
+			}
+		}
 	}	
+
+	free(delta);
+
+	for (int i = 0; i < n; i++) {
+		free(zs[i]);
+	}
+	for (int i = 0; i < layers; i++) {
+		free(activations[i]);
+	}
 
 }
 
