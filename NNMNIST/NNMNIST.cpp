@@ -397,7 +397,7 @@ void backprop(unsigned char* x_in, unsigned char y_in, double** nabla_w[], doubl
 
 	double* delta = hamard(delta_t1, delta_t2, sizes[n]);
 
-	free(delta_t1):
+	free(delta_t1);
 	free(delta_t2);
 
 	//nabla_b[n-1] = delta; //Speicherallokation...
